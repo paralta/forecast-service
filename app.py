@@ -8,8 +8,8 @@ from collections import namedtuple
 app = flask.Flask(__name__)
 
 # Initialise data and model from file
-data = pickle.load(open("deploy/data.pkl", "rb"))
-model = pickle.load(open("deploy/arima_model.pkl", "rb"))
+data = pickle.load(open("model/data.pkl", "rb"))
+model = pickle.load(open("model/arima_model.pkl", "rb"))
 
 # Initialise task queue and data
 q = queue.Queue()
