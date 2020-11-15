@@ -1,27 +1,23 @@
 import flask
 import pickle
-from deploy.utils import convert_str_to_list
 import model.model as mdl
 
 app = flask.Flask(__name__)
+data = pickle.load(open("deploy/data.pkl", "rb"))
+model = pickle.load(open("deploy/arima_model.pkl", "rb"))
 
 @app.route('/fit_model', methods=['POST'])
 def fit_model():
-    data = flask.request.get_json(force=True)['data']
-    pickle.dump(data, open("deploy/data.pkl", "wb"))
-
+    data = flask.request.get_json()['data']
     model = mdl.fit_model(data)
-    pickle.dump(model, open("deploy/arima_model.pkl", "wb"))
 
-    return 'OK\n'
+    return 'New model created\n'
 
 @app.route('/forecast', methods=['POST'])
 def forecast():
-    num_steps = flask.request.get_json(force=True)['num_steps']
+    num_steps = flask.request.get_json()['num_steps']
     num_steps = int(num_steps)
 
-    data = pickle.load(open("deploy/data.pkl", "rb"))
-    model = pickle.load(open("deploy/arima_model.pkl", "rb"))
     forecast_result = mdl.forecast(data, model, num_steps)
     response = {'forecast_result': list(forecast_result)}
 
