@@ -1,15 +1,13 @@
 import os, sys, json, pika, time, pickle, requests, threading
 import model.model as mdl
-import urllib.request
 
 # Initialise data and model from file
-data = pickle.load(urllib.request.urlopen('http://127.0.0.1:3333/model/data.pkl'))
-model_file = urllib.request.urlopen('http://127.0.0.1:3333/model/model.pkl')
-model = pickle.load(model_file)
-model_time = model_file.headers['last-modified']
+data = None
+model = None
+model_timestamp = time.time()
 
 def callback(ch, method, properties, body):
-    global model_time, data, model
+    global model_timestamp, data, model
 
     print(f"Received {body}")
     task = json.loads(body)
@@ -18,19 +16,20 @@ def callback(ch, method, properties, body):
     if task['type'] == 'fit_model':
         data = task['data']
         model = mdl.fit_model(data)
+
+        requests.post('http://0.0.0.0:5001/post_data', data=pickle.dumps(data))
+        requests.post('http://0.0.0.0:5001/post_model', data=pickle.dumps(model))
+
         requests.post('http://0.0.0.0:5000/fit_model_complete')
         print('New model has been created')
 
     # Process compute forecast task
     elif task['type'] == 'forecast':
-
-        # Check if new model needs to be loaded
-        model_file = urllib.request.urlopen('http://127.0.0.1:3333/model/model.pkl')
-        if model_time != model_file.headers['last-modified']:
-            data = pickle.load(urllib.request.urlopen('http://127.0.0.1:3333/model/data.pkl'))
-            model = pickle.load(model_file)
-            model_time = model_file.headers['last-modified']
-            print('New model loaded')
+        latest_model_timestamp = requests.get('http://0.0.0.0:5001/get_model_timestamp').json()['model_timestamp']
+        if data == None or latest_model_timestamp != model_timestamp:
+            data = pickle.loads(requests.get('http://0.0.0.0:5001/get_data').content)
+            model = pickle.loads(requests.get('http://0.0.0.0:5001/get_model').content)
+            model_timestamp = latest_model_timestamp
 
         forecast_result = mdl.forecast(data, model, task['num_steps'])
         forecast_result = {'id': task['id'], 'forecast_result': list(forecast_result)}
