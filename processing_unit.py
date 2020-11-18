@@ -1,11 +1,4 @@
-import os
-import sys
-import json
-import pika
-import time
-import pickle
-import requests
-import threading
+import os, sys, json, pika, time, pickle, requests, threading
 import model.model as mdl
 
 # Initialise data and model from file
