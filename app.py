@@ -2,28 +2,46 @@ import json, pika, time, flask
 
 app = flask.Flask(__name__)
 
-# Initialise task id and forecast results
+# Initialise task id, on hold flag and forecast results
 task_id = 0
+on_hold = False
 forecast_results = {}
 
 @app.route('/fit_model', methods=['POST'])
 def fit_model():
+    global on_hold
+
+    while on_hold:
+        print('Waiting while new model is being created')
+        time.sleep(1)
+
     # Get data from request
     data = flask.request.get_json()['data']
-    task = {'type': 'fit_model', 'data': data}
+
+    # Block other tasks from being added to queue
+    on_hold = True
 
     # Add create model task to queue
+    task = {'type': 'fit_model', 'data': data}
     channel.basic_publish(exchange='', routing_key='task', body=json.dumps(task))
-    return 'New model is being created\n'
+    print('New model is being created\n')
+    return 'OK'
 
 @app.route('/forecast', methods=['POST'])
 def forecast():
+    global task_id, on_hold
+
     # Get number of steps from request
     num_steps = int(flask.request.get_json()['num_steps'])
 
-    # Get new task id and add compute forecast task to queue
-    global task_id
+    # Get new task id
     task_id += 1
+
+    while on_hold:
+        print('Waiting while new model is being created')
+        time.sleep(1)
+
+    # Add compute forecast task to queue
     task = {'type': 'forecast', 'id': task_id, 'num_steps': num_steps}
     channel.basic_publish(exchange='', routing_key='task', body=json.dumps(task))
 
@@ -33,6 +51,13 @@ def forecast():
 
     # Return json with forecast result
     return flask.jsonify( {'forecast_result': forecast_results[str(task_id)]})
+
+@app.route('/fit_model_complete', methods=['POST'])
+def fit_model_complete():
+    # Resume adding tasks to queue
+    global on_hold
+    on_hold = False
+    return 'OK'
 
 @app.route('/forecast_result', methods=['POST'])
 def forecast_result():

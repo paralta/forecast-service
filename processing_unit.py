@@ -5,25 +5,17 @@ import model.model as mdl
 data = pickle.load(open("model/data.pkl", "rb"))
 model = pickle.load(open("model/arima_model.pkl", "rb"))
 
-# Initialise flag to indicate if model creation is in progress
-on_hold = False
-
 def callback(ch, method, properties, body):
-    global data, model, on_hold
-
-    while on_hold:
-        print('Waiting while new model is being created')
-        time.sleep(1)
+    global data, model
 
     print(f"Received {body}")
     task = json.loads(body)
 
     # Process fit model task
     if task['type'] == 'fit_model':
-        on_hold = True
         data = task['data']
         model = mdl.fit_model(data)
-        on_hold = False
+        requests.post('http://0.0.0.0:5000/fit_model_complete')
         print('New model has been created')
 
     # Process compute forecast task
