@@ -1,11 +1,15 @@
 import json
 import pika
+import time
 import flask
 
 app = flask.Flask(__name__)
 
 # Initialise task id
 task_id = 0
+
+# Initialise forecast results
+forecast_results = {}
 
 @app.route('/fit_model', methods=['POST'])
 def fit_model():
@@ -33,16 +37,21 @@ def forecast():
                           routing_key='task',
                           body=json.dumps(task))
 
+    while str(task_id) not in forecast_results:
+        print('Waiting while forecast result is being computed')
+        time.sleep(1)
+
     # Return json with task id
-    return flask.jsonify( {'task_id': task_id})
+    return flask.jsonify( {'forecast_result': forecast_results[str(task_id)]})
 
-# @app.route('/forecast_result', methods=['POST'])
-# def forecast_result():
-#     # Get number of steps from request
-#     task_id = int(flask.request.get_json()['task_id'])
+@app.route('/forecast_result', methods=['POST'])
+def forecast_result():
+    # Get forecast result from request
+    r = flask.request.get_json()
+    task_id = r['id']
+    forecast_result = r['forecast_result']
 
-#     # Return json with forecast result
-#     return flask.jsonify({'forecast_result': forecast_results[task_id]})
+    forecast_results[str(task_id)] = forecast_result
 
 if __name__ == '__main__':
     # Set upconnection with RabbitMQ server
@@ -53,4 +62,4 @@ if __name__ == '__main__':
     channel.queue_declare(queue='task')
 
     # Run flask
-    app.run(host='0.0.0.0', port=5000)
+    app.run(threaded=True, host='0.0.0.0', port=5000)
