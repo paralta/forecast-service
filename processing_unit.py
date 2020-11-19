@@ -1,5 +1,8 @@
-import os, sys, json, pika, time, pickle, requests, threading
+import json, pika, time, pickle, requests, threading
 import model.model as mdl
+
+broker_url = 'http://0.0.0.0:5000/'
+model_url = 'http://0.0.0.0:5001/'
 
 # Initialise data and model from file
 data = None
@@ -14,26 +17,33 @@ def callback(ch, method, properties, body):
 
     # Process fit model task
     if task['type'] == 'fit_model':
+        # Fit model
         data = task['data']
         model = mdl.fit_model(data)
 
-        requests.post('http://0.0.0.0:5001/post_data', data=pickle.dumps(data))
-        requests.post('http://0.0.0.0:5001/post_model', data=pickle.dumps(model))
+        # Load model to server
+        requests.post(model_url + 'post_data', data=pickle.dumps(data))
+        requests.post(model_url + 'post_model', data=pickle.dumps(model))
 
-        requests.post('http://0.0.0.0:5000/fit_model_complete')
+        # Announce that fit model task is complete
+        requests.post(broker_url + 'fit_model_complete')
         print('New model has been created')
 
     # Process compute forecast task
     elif task['type'] == 'forecast':
-        latest_model_timestamp = requests.get('http://0.0.0.0:5001/get_model_timestamp').json()['model_timestamp']
+        # Check if latest model is loaded. If not, get it from server
+        latest_model_timestamp = requests.get(model_url + 'get_model_timestamp').json()['model_timestamp']
         if data == None or latest_model_timestamp != model_timestamp:
-            data = pickle.loads(requests.get('http://0.0.0.0:5001/get_data').content)
-            model = pickle.loads(requests.get('http://0.0.0.0:5001/get_model').content)
+            data = pickle.loads(requests.get(model_url + 'get_data').content)
+            model = pickle.loads(requests.get(model_url + 'get_model').content)
             model_timestamp = latest_model_timestamp
 
+        # Calculate forecast
         forecast_result = mdl.forecast(data, model, task['num_steps'])
         forecast_result = {'id': task['id'], 'forecast_result': list(forecast_result)}
-        requests.post('http://0.0.0.0:5000/forecast_result', json=forecast_result)
+
+        # Send forecast result
+        requests.post(broker_url + 'forecast_result', json=forecast_result)
         print(f'New forecast result has been computed {forecast_result}')
 
 def processing_unit():
@@ -56,4 +66,3 @@ if __name__ == '__main__':
     num_threads = 3
     for _ in range(num_threads):
         threading.Thread(target=processing_unit).start()
-

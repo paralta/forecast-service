@@ -11,6 +11,7 @@ forecast_results = {}
 def fit_model():
     global on_hold
 
+    # Wait if model creation is in progress
     while on_hold:
         print('Waiting while new model is being created')
         time.sleep(1)
@@ -24,6 +25,7 @@ def fit_model():
     # Add create model task to queue
     task = {'type': 'fit_model', 'data': data}
     channel.basic_publish(exchange='', routing_key='task', body=json.dumps(task))
+
     print('New model is being created\n')
     return 'OK'
 
@@ -37,6 +39,7 @@ def forecast():
     # Get new task id
     task_id += 1
 
+    # Wait if model creation is in progress
     while on_hold:
         print('Waiting while new model is being created')
         time.sleep(1)
@@ -45,6 +48,7 @@ def forecast():
     task = {'type': 'forecast', 'id': task_id, 'num_steps': num_steps}
     channel.basic_publish(exchange='', routing_key='task', body=json.dumps(task))
 
+    # Wait while forecast result calculation is in progress
     while str(task_id) not in forecast_results:
         print('Waiting while forecast result is being computed')
         time.sleep(1)

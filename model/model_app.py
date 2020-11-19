@@ -1,8 +1,8 @@
-import json, time, flask, pickle
+import time, flask, pickle
 
 app = flask.Flask(__name__)
 
-# Initialise task id, on hold flag and forecast results
+# Load initial models from disk
 data = pickle.load(open("data.pkl", "rb"))
 model = pickle.load(open("arima_model.pkl", "rb"))
 model_timestamp = time.time()
@@ -10,7 +10,6 @@ model_timestamp = time.time()
 @app.route('/post_data', methods=['POST'])
 def post_data():
     global data
-    print(flask.request.data)
     data = pickle.loads(flask.request.data)
     return 'OK'
 
