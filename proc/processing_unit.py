@@ -1,5 +1,5 @@
 import json, pika, time, pickle, requests, threading
-import model.model as mdl
+import model as mdl
 
 broker_url = 'http://0.0.0.0:5000/'
 model_url = 'http://0.0.0.0:5001/'
@@ -48,7 +48,7 @@ def callback(ch, method, properties, body):
 
 def processing_unit():
     # Set upconnection with RabbitMQ server
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+    connection = pika.BlockingConnection(pika.ConnectionParameters('0.0.0.0'))
     channel = connection.channel()
 
     # Create a task queue
