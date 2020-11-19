@@ -72,7 +72,7 @@ def forecast_result():
 
 if __name__ == '__main__':
     # Set upconnection with RabbitMQ server
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    connection = pika.BlockingConnection(pika.ConnectionParameters('0.0.0.0'))
     channel = connection.channel()
 
     # Create a task queue

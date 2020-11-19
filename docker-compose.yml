@@ -1,0 +1,25 @@
+version: "3.8"
+services:
+  web:
+    build: .
+    network_mode: "host"
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/code
+      - logvolume01:/var/log
+  model:
+    build: ./model
+    network_mode: "host"
+    ports:
+      - "5001:5001"
+  process_unit:
+    build: ./proc
+    network_mode: "host"
+  rabbit:
+    image: rabbitmq:latest
+    network_mode: "host"
+    ports:
+      - "5672:5672"
+volumes:
+  logvolume01: {}
