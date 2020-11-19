@@ -4,7 +4,7 @@ app = flask.Flask(__name__)
 
 # Load initial models from disk
 data = pickle.load(open("data.pkl", "rb"))
-model = pickle.load(open("arima_model.pkl", "rb"))
+model = pickle.load(open("model.pkl", "rb"))
 model_timestamp = time.time()
 
 @app.route('/post_data', methods=['POST'])
