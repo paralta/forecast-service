@@ -1,16 +1,17 @@
 import json, pika, time, pickle, requests, threading
 import model as mdl
 
-broker_url = 'http://0.0.0.0:5000/'
-model_url = 'http://0.0.0.0:5001/'
+broker_url = 'http://web:5000/'
+model_url = 'http://model:5001/'
 
 # Initialise data and model from file
+no_data = True
 data = None
 model = None
 model_timestamp = time.time()
 
 def callback(ch, method, properties, body):
-    global model_timestamp, data, model
+    global no_data, model_timestamp, data, model
 
     print(f"Received {body}")
     task = json.loads(body)
@@ -33,10 +34,11 @@ def callback(ch, method, properties, body):
     elif task['type'] == 'forecast':
         # Check if latest model is loaded. If not, get it from server
         latest_model_timestamp = requests.get(model_url + 'get_model_timestamp').json()['model_timestamp']
-        if data == None or latest_model_timestamp != model_timestamp:
+        if no_data or latest_model_timestamp != model_timestamp:
             data = pickle.loads(requests.get(model_url + 'get_data').content)
             model = pickle.loads(requests.get(model_url + 'get_model').content)
             model_timestamp = latest_model_timestamp
+            no_data = False
 
         # Calculate forecast
         forecast_result = mdl.forecast(data, model, task['num_steps'])
@@ -48,7 +50,7 @@ def callback(ch, method, properties, body):
 
 def processing_unit():
     # Set upconnection with RabbitMQ server
-    connection = pika.BlockingConnection(pika.ConnectionParameters('0.0.0.0'))
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbit', port='5672'))
     channel = connection.channel()
 
     # Create a task queue
