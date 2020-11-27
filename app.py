@@ -1,5 +1,6 @@
 import json, pika, time, flask
 
+TIMEOUT_S = 20
 app = flask.Flask(__name__)
 
 # Initialise task id, on hold flag and forecast results
@@ -12,8 +13,13 @@ def fit_model():
     global on_hold
 
     # Wait if model creation is in progress
+    timer = 0
     while on_hold:
         print('Waiting while new model is being created')
+        timer += 1
+        # Return timeout if timer exceeds timeout
+        if timer > TIMEOUT_S:
+            return 'TIMEOUT'
         time.sleep(1)
 
     # Get data from request
@@ -40,8 +46,13 @@ def forecast():
     task_id += 1
 
     # Wait if model creation is in progress
+    timer = 0
     while on_hold:
         print('Waiting while new model is being created')
+        timer += 1
+        # Return timeout if timer exceeds timeout
+        if timer > TIMEOUT_S:
+            return 'TIMEOUT'
         time.sleep(1)
 
     # Add compute forecast task to queue
@@ -49,8 +60,13 @@ def forecast():
     channel.basic_publish(exchange='', routing_key='task', body=json.dumps(task))
 
     # Wait while forecast result calculation is in progress
+    timer = 0
     while str(task_id) not in forecast_results:
         print('Waiting while forecast result is being computed')
+        timer += 1
+        # Return timeout if timer exceeds timeout
+        if timer > TIMEOUT_S:
+            return 'TIMEOUT'
         time.sleep(1)
 
     # Return json with forecast result
