@@ -1,10 +1,9 @@
-import json, pika, time, flask
+import json, pika, time, flask, string, random
 
 TIMEOUT_S = 20
 app = flask.Flask(__name__)
 
 # Initialise task id, on hold flag and forecast results
-task_id = 0
 on_hold = False
 forecast_results = {}
 
@@ -35,15 +34,18 @@ def fit_model():
     print('New model is being created\n')
     return 'OK'
 
+def id_generator(size=8, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
+
 @app.route('/forecast', methods=['POST'])
 def forecast():
-    global task_id, on_hold
+    global on_hold
 
     # Get number of steps from request
     num_steps = int(flask.request.get_json()['num_steps'])
 
     # Get new task id
-    task_id += 1
+    task_id = str(time.time()) + '_' + id_generator()
 
     # Wait if model creation is in progress
     timer = 0
