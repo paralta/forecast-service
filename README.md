@@ -2,27 +2,11 @@
 
 Allows the user to create of a new forecasting model from data provided and to make predictions into the future given the number of steps provided.
 
-## Requirements
-
-```bash
-pip3 install -r requirements.txt
-```
-
 ## Run
 
 ```bash
-# Start RabbitMQ server
-service rabbitmq-server start
-
-# Start model server
-cd model
-python3 model_app.py
-
-# Start broker app
-python3 app.py
-
-# Start processing units
-python3 processing_unit.py
+# Start compose and run app
+docker-compose up
 
 # Send requests to http://localhost:5000/
 # (Example requests)
